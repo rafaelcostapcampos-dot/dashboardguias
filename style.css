@@ -476,7 +476,7 @@ thead {
 
 th,
 td {
-  padding: 13px 12px;
+  padding: 12px 8px;
   border-bottom: 1px solid rgba(169, 190, 218, 0.13);
   text-align: left;
   vertical-align: middle;
@@ -484,8 +484,9 @@ td {
 
 th {
   color: #afbfd4;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
+  line-height: 1.15;
 }
 
 td {
@@ -495,12 +496,13 @@ td {
 
 td:first-child,
 th:first-child {
-  width: 52%;
+  width: 46%;
   overflow-wrap: anywhere;
 }
 
 .num {
   text-align: right;
+  white-space: nowrap;
 }
 
 tbody tr {

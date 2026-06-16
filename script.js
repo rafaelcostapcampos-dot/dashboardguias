@@ -101,7 +101,7 @@ function buildSummary(registros) {
     porStatus: countBy(registrosNormalizados, "status"),
     porTipoSolicitacao: groupWithStatus(registrosNormalizados, "tipoSolicitacao"),
     porMotivoNegativa: countBy(registrosNormalizados.filter(r => r.status === "Negado"), "motivoNegativa"),
-    especialidades: groupWithStatus(consultas, "especialidade", { skipInvalid: true }),
+    especialidades: groupWithStatus(consultas.filter(isValidSpecialtyRankingRecord), "especialidade", { skipInvalid: true }),
     exames: groupWithStatus(exames, "exameEspecifico", { skipInvalid: true }),
     locaisConsulta: groupWithStatus(consultas, "local"),
     locaisExame: groupWithStatus(exames, "local")
@@ -109,11 +109,34 @@ function buildSummary(registros) {
 }
 
 function isConsultaRecord(registro) {
-  return registro.tipoSolicitacao === "Consulta" || registro.tipoSolicitacao === "Consulta + Exame";
+  const tipo = normalizeText(registro.tipoSolicitacaoOriginal || registro.tipoSolicitacao);
+  return tipo === "consulta" || tipo === "consulta exame";
 }
 
 function isExameRecord(registro) {
-  return registro.tipoSolicitacao === "Exame" || registro.tipoSolicitacao === "Consulta + Exame";
+  const tipo = normalizeText(registro.tipoSolicitacaoOriginal || registro.tipoSolicitacao);
+  return tipo === "exame" || tipo === "consulta exame";
+}
+
+function isValidSpecialtyRankingRecord(registro) {
+  if (!isValidRankingValue(registro.especialidade)) return false;
+
+  if (registro.especialidade === "Oftalmologia") {
+    const especialidadeOriginal = normalizeText(registro.especialidadeOriginal);
+    const tipoOriginal = normalizeText(registro.tipoSolicitacaoOriginal || registro.tipoSolicitacao);
+
+    return (
+      ["consulta", "consulta exame"].includes(tipoOriginal) &&
+      [
+        "oftalmologia",
+        "oftamologia",
+        "oftalmologista",
+        "oftamologista"
+      ].includes(especialidadeOriginal)
+    );
+  }
+
+  return true;
 }
 
 function normalizeRecordForDashboard(registro) {
@@ -169,6 +192,8 @@ function normalizeEspecialidade(value) {
     endocrinologista: "Endocrinologia",
     ginecologista: "Ginecologia",
     neurologista: "Neurologia",
+    oftamologia: "Oftalmologia",
+    oftamologista: "Oftalmologia",
     oftalmologista: "Oftalmologia",
     ortop: "Ortopedia",
     ortopedista: "Ortopedia",
@@ -462,7 +487,7 @@ function renderTable(id, items, fields) {
         <tbody>
           ${items.map(item => `
             <tr>
-              ${fields.map(f => renderTableCell(item, f, maxTotal)).join("")}
+              ${fields.map(f => renderTableCell(id, item, f, maxTotal)).join("")}
             </tr>
           `).join("")}
         </tbody>
@@ -471,8 +496,15 @@ function renderTable(id, items, fields) {
   document.getElementById(id).innerHTML = html;
 }
 
-function renderTableCell(item, field, maxTotal) {
-  if (field === "total") {
+function renderTableCell(tableId, item, field, maxTotal) {
+  const useMetricBar = [
+    "tableEspecialidades",
+    "tableExames",
+    "tableDestinosConsulta",
+    "tableDestinosExame"
+  ].includes(tableId);
+
+  if (field === "total" && useMetricBar) {
     const value = Number(item.total || 0);
     const width = Math.max((value / maxTotal) * 100, value ? 6 : 0);
 
