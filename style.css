@@ -29,11 +29,14 @@ body {
   min-height: 100vh;
   color: var(--text);
   background:
-    radial-gradient(circle at 18% -8%, rgba(79, 140, 255, 0.34), transparent 34%),
-    radial-gradient(circle at 88% 6%, rgba(39, 211, 195, 0.18), transparent 30%),
-    linear-gradient(135deg, var(--bg) 0%, var(--bg-2) 48%, #071827 100%);
+    linear-gradient(120deg, rgba(79, 140, 255, 0.18), transparent 26%),
+    linear-gradient(245deg, rgba(39, 211, 195, 0.14), transparent 34%),
+    linear-gradient(135deg, var(--bg) 0%, var(--bg-2) 46%, #071827 100%);
+  background-size: 160% 160%;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   letter-spacing: 0;
+  animation: ambientShift 16s ease-in-out infinite alternate;
+  overflow-x: hidden;
 }
 
 body::before {
@@ -59,9 +62,21 @@ body::before {
   top: 0;
   height: 100vh;
   padding: 24px 18px;
-  background: rgba(7, 17, 29, 0.72);
+  background:
+    linear-gradient(180deg, rgba(14, 29, 49, 0.96), rgba(5, 13, 24, 0.92));
   border-right: 1px solid var(--line);
   backdrop-filter: blur(18px);
+}
+
+.sidebar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -1px;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(to bottom, transparent, var(--cyan), transparent);
+  opacity: 0.7;
 }
 
 .brand {
@@ -82,6 +97,7 @@ body::before {
   box-shadow: 0 14px 34px rgba(79, 140, 255, 0.34);
   font-size: 24px;
   font-weight: 900;
+  animation: floatBadge 4.8s ease-in-out infinite;
 }
 
 .brand h1,
@@ -122,6 +138,16 @@ nav a {
   transition: transform 180ms ease, color 180ms ease, background 180ms ease, border-color 180ms ease;
 }
 
+nav a::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.28;
+}
+
 nav a::before {
   content: "";
   position: absolute;
@@ -147,6 +173,7 @@ nav a.active::before {
 .content {
   min-width: 0;
   padding: 26px;
+  overflow-x: hidden;
 }
 
 .topbar {
@@ -157,16 +184,34 @@ nav a.active::before {
   margin-bottom: 22px;
   padding: 20px;
   border: 1px solid var(--line);
-  border-radius: 18px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.045));
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.035)),
+    linear-gradient(90deg, rgba(79, 140, 255, 0.2), rgba(39, 211, 195, 0.1));
   box-shadow: var(--shadow);
   backdrop-filter: blur(18px);
   animation: rise 520ms ease both;
 }
 
+.topbar > div {
+  min-width: 0;
+}
+
+.topbar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  transform: translateX(-100%);
+  animation: sheen 5.8s ease-in-out infinite;
+}
+
 .topbar h2 {
-  font-size: 28px;
+  max-width: 430px;
+  font-size: clamp(34px, 4.1vw, 58px);
   line-height: 1.05;
+  letter-spacing: 0;
 }
 
 .topbar p {
@@ -180,6 +225,8 @@ nav a.active::before {
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 10px;
+  max-width: 620px;
+  min-width: 0;
 }
 
 label {
@@ -239,8 +286,8 @@ button:hover {
 .cards {
   display: grid;
   grid-template-columns: repeat(5, minmax(150px, 1fr));
-  gap: 14px;
-  margin-bottom: 16px;
+  gap: 16px;
+  margin-bottom: 18px;
 }
 
 .card,
@@ -253,10 +300,30 @@ button:hover {
 }
 
 .card {
-  min-height: 132px;
-  padding: 18px;
-  border-radius: 18px;
+  min-height: 154px;
+  padding: 20px;
+  border-radius: 22px;
   animation: rise 560ms ease both;
+  transition: transform 190ms ease, box-shadow 190ms ease, border-color 190ms ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(255, 255, 255, 0.34);
+  box-shadow: 0 30px 84px rgba(0, 0, 0, 0.42);
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0.08));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.36);
 }
 
 .card::after,
@@ -283,7 +350,7 @@ button:hover {
   z-index: 1;
   display: block;
   margin-top: 12px;
-  font-size: clamp(28px, 3vw, 42px);
+  font-size: clamp(34px, 4.2vw, 54px);
   line-height: 1;
 }
 
@@ -304,8 +371,8 @@ button:hover {
 
 .grid {
   display: grid;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 18px;
+  margin-bottom: 18px;
 }
 
 .grid.two {
@@ -318,10 +385,27 @@ button:hover {
 
 .panel {
   min-width: 0;
-  padding: 18px;
-  border-radius: 18px;
-  background: var(--surface);
+  padding: 20px;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.035)),
+    var(--surface);
   animation: rise 600ms ease both;
+  transition: transform 190ms ease, border-color 190ms ease, box-shadow 190ms ease;
+}
+
+.panel:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(to bottom, var(--blue), var(--cyan), var(--green));
+  opacity: 0.95;
 }
 
 .panel-head {
@@ -334,7 +418,19 @@ button:hover {
   position: relative;
   z-index: 1;
   margin-bottom: 14px;
-  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+}
+
+.panel h3::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--cyan);
+  box-shadow: 0 0 18px rgba(39, 211, 195, 0.9);
 }
 
 canvas {
@@ -361,12 +457,14 @@ canvas {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: rgba(5, 14, 25, 0.26);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
+  min-width: 0;
 }
 
 thead {
@@ -378,7 +476,7 @@ thead {
 
 th,
 td {
-  padding: 12px 10px;
+  padding: 13px 12px;
   border-bottom: 1px solid rgba(169, 190, 218, 0.13);
   text-align: left;
   vertical-align: middle;
@@ -406,11 +504,35 @@ th:first-child {
 }
 
 tbody tr {
-  transition: background 160ms ease, transform 160ms ease;
+  transition: background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
 }
 
 tbody tr:hover {
   background: rgba(79, 140, 255, 0.11);
+  box-shadow: inset 3px 0 0 var(--cyan);
+}
+
+.metric-cell {
+  display: grid;
+  gap: 6px;
+  min-width: 72px;
+}
+
+.metric-value {
+  font-weight: 850;
+}
+
+.metric-bar {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.metric-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--blue), var(--cyan));
 }
 
 .hint {
@@ -463,6 +585,22 @@ tbody tr:hover {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes ambientShift {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
+}
+
+@keyframes floatBadge {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes sheen {
+  0%, 55% { transform: translateX(-100%); opacity: 0; }
+  68% { opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

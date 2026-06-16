@@ -2,6 +2,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbykPq-urc85pjo59Uy0X9Wm
 
 let rawData = null;
 let charts = {};
+let cardAnimationFrame = null;
 
 const meses = {
   1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun",
@@ -213,16 +214,46 @@ function pct(value, total) {
 }
 
 function renderCards(c) {
-  document.getElementById("cardTotal").textContent = c.total;
-  document.getElementById("cardAprovadas").textContent = c.aprovadas;
-  document.getElementById("cardNegadas").textContent = c.negadas;
-  document.getElementById("cardParciais").textContent = c.parciais;
-  document.getElementById("cardPsicologia").textContent = c.psicologia;
+  animateCardNumbers({
+    cardTotal: c.total,
+    cardAprovadas: c.aprovadas,
+    cardNegadas: c.negadas,
+    cardParciais: c.parciais,
+    cardPsicologia: c.psicologia
+  });
 
   document.getElementById("taxaAprovacao").textContent = pct(c.aprovadas, c.total);
   document.getElementById("taxaNegativa").textContent = pct(c.negadas, c.total);
   document.getElementById("taxaParcial").textContent = pct(c.parciais, c.total);
   document.getElementById("taxaPsicologia").textContent = pct(c.psicologia, c.total);
+}
+
+function animateCardNumbers(values) {
+  if (cardAnimationFrame) cancelAnimationFrame(cardAnimationFrame);
+
+  const entries = Object.entries(values).map(([id, target]) => {
+    const el = document.getElementById(id);
+    const current = Number(String(el.textContent || "0").replace(/\D/g, "")) || 0;
+    return { el, current, target: Number(target) || 0 };
+  });
+  const start = performance.now();
+  const duration = 650;
+
+  const tick = now => {
+    const progress = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+
+    entries.forEach(({ el, current, target }) => {
+      const value = Math.round(current + (target - current) * eased);
+      el.textContent = value.toLocaleString("pt-BR");
+    });
+
+    if (progress < 1) {
+      cardAnimationFrame = requestAnimationFrame(tick);
+    }
+  };
+
+  cardAnimationFrame = requestAnimationFrame(tick);
 }
 
 function renderCharts(registros, resumo) {
@@ -392,6 +423,8 @@ function renderTable(id, items, fields) {
     parciais: "Parciais"
   };
 
+  const maxTotal = Math.max(...items.map(item => Number(item.total || 0)), 1);
+
   const html = `
     <div class="table-wrap">
       <table>
@@ -401,13 +434,31 @@ function renderTable(id, items, fields) {
         <tbody>
           ${items.map(item => `
             <tr>
-              ${fields.map(f => `<td class="${f !== "nome" ? "num" : ""}">${escapeHtml(item[f] ?? 0)}</td>`).join("")}
+              ${fields.map(f => renderTableCell(item, f, maxTotal)).join("")}
             </tr>
           `).join("")}
         </tbody>
       </table>
     </div>`;
   document.getElementById(id).innerHTML = html;
+}
+
+function renderTableCell(item, field, maxTotal) {
+  if (field === "total") {
+    const value = Number(item.total || 0);
+    const width = Math.max((value / maxTotal) * 100, value ? 6 : 0);
+
+    return `
+      <td class="num">
+        <div class="metric-cell">
+          <span class="metric-value">${escapeHtml(value)}</span>
+          <span class="metric-bar"><span class="metric-fill" style="width:${width}%"></span></span>
+        </div>
+      </td>
+    `;
+  }
+
+  return `<td class="${field !== "nome" ? "num" : ""}">${escapeHtml(item[field] ?? 0)}</td>`;
 }
 
 function renderInconsistencias(items) {
