@@ -182,7 +182,25 @@ function normalizeExame(value) {
     return "Ecocardiograma Transtorácico (ECOTT)";
   }
 
-  if (t.includes("oftalmologico") || t.includes("oftalmologicos") || t.includes("oftamologico") || t.includes("oftamologicos") || t.includes("oftalmo") || t.includes("oct") || t.includes("mapeamento de retina")) {
+  if (
+    t.includes("oct") ||
+    t.includes("mapeamento de retina") ||
+    t.includes("retinografia") ||
+    t.includes("campimetria") ||
+    t.includes("paquimetria") ||
+    t.includes("tonometria") ||
+    t.includes("gonioscopia") ||
+    t.includes("biometria ocular") ||
+    t.includes("topografia corneana") ||
+    t.includes("curva tensional diaria") ||
+    t.includes("campo visual") ||
+    t.includes("microscopia especular") ||
+    t.includes("teste ortoptico") ||
+    t.includes("exames oftalmologicos") ||
+    t.includes("exame oftalmologico") ||
+    t.includes("exames oftamologicos") ||
+    t.includes("exame oftamologico")
+  ) {
     return "Exames oftalmológicos";
   }
 
