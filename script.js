@@ -8,6 +8,8 @@ const meses = {
   7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"
 };
 
+const chartPalette = ["#4f8cff", "#42d77d", "#ff6575", "#f7b955", "#a47cff", "#27d3c3", "#f472b6", "#94a3b8"];
+
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnRefresh").addEventListener("click", loadData);
   document.getElementById("btnExportPdf").addEventListener("click", exportarPDF);
@@ -272,9 +274,25 @@ function drawChart(id, type, data) {
 
   if (charts[id]) charts[id].destroy();
 
+  data.datasets = data.datasets.map((dataset, index) => ({
+    ...dataset,
+    backgroundColor: type === "doughnut"
+      ? chartPalette
+      : chartPalette[index % chartPalette.length],
+    borderColor: type === "doughnut"
+      ? "#0c1828"
+      : chartPalette[index % chartPalette.length],
+    borderWidth: type === "doughnut" ? 3 : 0,
+    hoverOffset: type === "doughnut" ? 10 : 0
+  }));
+
   const baseOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    animation: {
+      duration: 900,
+      easing: "easeOutQuart"
+    },
     plugins: {
       legend: {
         labels: {
@@ -318,6 +336,10 @@ function drawChart(id, type, data) {
     baseOptions.scales.y.stacked = false;
     baseOptions.categoryPercentage = 0.72;
     baseOptions.barPercentage = 0.78;
+  }
+
+  if (type === "doughnut") {
+    baseOptions.cutout = "62%";
   }
 
   charts[id] = new Chart(ctx, {
