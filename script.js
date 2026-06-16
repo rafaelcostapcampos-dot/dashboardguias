@@ -124,15 +124,11 @@ function isValidSpecialtyRankingRecord(registro) {
   if (registro.especialidade === "Oftalmologia") {
     const especialidadeOriginal = normalizeText(registro.especialidadeOriginal);
     const tipoOriginal = normalizeText(registro.tipoSolicitacaoOriginal || registro.tipoSolicitacao);
-    const tipoExame = normalizeExame(registro.tipoExameOriginal || registro.tipoExame);
-    const exameEspecifico = normalizeExame(registro.exameEspecificoOriginal || registro.exameEspecifico);
+    const hasExamFilled =
+      isValidRankingValue(registro.tipoExameOriginal || registro.tipoExame) ||
+      isValidRankingValue(registro.exameEspecificoOriginal || registro.exameEspecifico);
 
-    if (
-      tipoExame === "Exames oftalmológicos" ||
-      exameEspecifico === "Exames oftalmológicos"
-    ) {
-      return false;
-    }
+    if (hasExamFilled) return false;
 
     return (
       ["consulta", "consulta exame"].includes(tipoOriginal) &&
