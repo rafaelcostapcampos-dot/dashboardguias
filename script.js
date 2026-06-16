@@ -339,70 +339,236 @@ function escapeHtml(value) {
 }
 
 
-async function exportarPDF() {
-  const btn = document.getElementById("btnExportPdf");
-  const oldText = btn.textContent;
 
-  try {
-    btn.textContent = "Gerando PDF...";
-    btn.disabled = true;
 
-    const origem = document.getElementById("filterOrigem").value;
-    const ano = document.getElementById("filterAno").value;
-    const mes = document.getElementById("filterMes").value;
-    const mesNome = mes === "Todos" ? "Ano" : (meses[Number(mes)] || "Mes");
+function exportarPDF() {
+  const registros = getFilteredRecords();
+  const resumo = buildSummary(registros);
+  const origem = document.getElementById("filterOrigem").value;
+  const ano = document.getElementById("filterAno").value;
+  const mes = document.getElementById("filterMes").value;
+  const periodo = mes === "Todos" ? `Ano ${ano}` : `${meses[Number(mes)]}/${ano}`;
+  const atualizacao = rawData?.atualizadoEm ? new Date(rawData.atualizadoEm).toLocaleString("pt-BR") : new Date().toLocaleString("pt-BR");
 
-    const clone = document.querySelector(".content").cloneNode(true);
+  const topEsp = resumo.especialidades.slice(0, 8);
+  const topExames = resumo.exames.slice(0, 8);
+  const topConsulta = resumo.locaisConsulta.slice(0, 8);
+  const topExame = resumo.locaisExame.slice(0, 8);
+  const motivos = resumo.porMotivoNegativa.slice(0, 6);
+  const mensal = resumo.porMes;
 
-    const inconsistencias = clone.querySelector("#inconsistencias");
-    if (inconsistencias) inconsistencias.remove();
-
-    const buttons = clone.querySelectorAll("button");
-    buttons.forEach(b => b.remove());
-
-    const inputs = clone.querySelectorAll("input");
-    inputs.forEach(input => input.remove());
-
-    const wrapper = document.createElement("div");
-    wrapper.className = "pdf-export";
-    wrapper.style.background = "#0b1524";
-    wrapper.style.color = "#e8eef7";
-    wrapper.style.padding = "20px";
-    wrapper.style.width = "1400px";
-    wrapper.appendChild(clone);
-
-    document.body.appendChild(wrapper);
-
-    const filename = `dashboard-guias_${origem}_${ano}_${mesNome}.pdf`
-      .replaceAll(" ", "_")
-      .replaceAll("/", "-");
-
-    const options = {
-      margin: 8,
-      filename,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#0b1524"
-      },
-      jsPDF: {
-        unit: "mm",
-        format: "a4",
-        orientation: "landscape"
-      },
-      pagebreak: {
-        mode: ["avoid-all", "css", "legacy"]
-      }
-    };
-
-    await html2pdf().set(options).from(wrapper).save();
-
-    wrapper.remove();
-  } catch (err) {
-    alert("Erro ao gerar PDF: " + err.message);
-  } finally {
-    btn.textContent = oldText;
-    btn.disabled = false;
+  const html = `
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Relatório Executivo - Solicitações de Guias</title>
+<style>
+  @page { size: A4 landscape; margin: 9mm; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #08111f;
+    color: #eef5ff;
+    font-family: Inter, Arial, sans-serif;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
+  .page {
+    width: 100%;
+    min-height: 190mm;
+    padding: 18px;
+    background:
+      radial-gradient(circle at 10% 10%, rgba(48,108,255,.35), transparent 28%),
+      radial-gradient(circle at 92% 15%, rgba(52,194,107,.18), transparent 25%),
+      linear-gradient(135deg, #0b1524 0%, #10243d 100%);
+  }
+  .hero {
+    display: grid;
+    grid-template-columns: 1.1fr .9fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .titlebox, .glass {
+    background: rgba(255,255,255,.075);
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 18px;
+    box-shadow: 0 16px 38px rgba(0,0,0,.24);
+    backdrop-filter: blur(8px);
+  }
+  .titlebox { padding: 22px; }
+  h1 { margin: 0; font-size: 34px; letter-spacing: -.8px; }
+  .subtitle { margin: 7px 0 0; color: #aebbd0; font-size: 14px; }
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 14px;
+  }
+  .meta div { padding: 12px; border-radius: 14px; background: rgba(255,255,255,.07); }
+  .meta span { display:block; color:#aebbd0; font-size:11px; text-transform:uppercase; letter-spacing:.7px; }
+  .meta strong { display:block; margin-top:4px; font-size:18px; }
+
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .kpi {
+    padding: 14px;
+    border-radius: 18px;
+    min-height: 92px;
+    box-shadow: 0 16px 30px rgba(0,0,0,.2);
+  }
+  .kpi b { display:block; font-size: 28px; margin-top: 7px; }
+  .kpi span { font-size: 12px; font-weight: 700; }
+  .kpi small { color: rgba(255,255,255,.82); }
+  .blue { background: linear-gradient(135deg,#1848b8,#3b82f6); }
+  .green { background: linear-gradient(135deg,#16763d,#34c26b); }
+  .red { background: linear-gradient(135deg,#9f2c39,#ef5350); }
+  .orange { background: linear-gradient(135deg,#b45c0c,#f5a623); }
+  .purple { background: linear-gradient(135deg,#4b35aa,#7c4dff); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1.15fr .85fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .grid4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .panel {
+    padding: 14px;
+    border-radius: 18px;
+    background: rgba(255,255,255,.075);
+    border: 1px solid rgba(255,255,255,.16);
+    box-shadow: 0 16px 32px rgba(0,0,0,.18);
+    break-inside: avoid;
+  }
+  h2 {
+    margin: 0 0 10px;
+    font-size: 15px;
+    letter-spacing: -.2px;
+  }
+  .bars { display: grid; gap: 8px; }
+  .bar-row { display:grid; grid-template-columns: 130px 1fr 45px; gap:8px; align-items:center; font-size: 11px; }
+  .bar-track { height: 9px; border-radius: 99px; background: rgba(255,255,255,.12); overflow:hidden; }
+  .bar-fill { height:100%; border-radius:99px; background: linear-gradient(90deg,#3b82f6,#34c26b); }
+  table { width:100%; border-collapse: collapse; font-size: 10.5px; }
+  th, td { padding: 6px 6px; border-bottom:1px solid rgba(255,255,255,.10); text-align:left; }
+  th { color:#aebbd0; font-size: 10px; text-transform:uppercase; letter-spacing:.4px; }
+  td.num, th.num { text-align:right; }
+  .footer {
+    margin-top: 12px;
+    color:#aebbd0;
+    font-size: 10px;
+    display:flex;
+    justify-content:space-between;
+  }
+  .pagebreak { page-break-before: always; }
+  @media print {
+    body { background:#08111f; }
+  }
+</style>
+</head>
+<body>
+  <section class="page">
+    <div class="hero">
+      <div class="titlebox">
+        <h1>Relatório Executivo de Guias</h1>
+        <p class="subtitle">Painel quantitativo de solicitações, autorizações, negativas e encaminhamentos.</p>
+      </div>
+      <div class="glass meta">
+        <div><span>Origem</span><strong>${escapeHtml(origem)}</strong></div>
+        <div><span>Período</span><strong>${escapeHtml(periodo)}</strong></div>
+        <div><span>Atualizado</span><strong>${escapeHtml(atualizacao)}</strong></div>
+      </div>
+    </div>
+
+    <div class="kpis">
+      ${kpi("Total", resumo.cards.total, "100% do período", "blue")}
+      ${kpi("Aprovadas", resumo.cards.aprovadas, pct(resumo.cards.aprovadas, resumo.cards.total), "green")}
+      ${kpi("Negadas", resumo.cards.negadas, pct(resumo.cards.negadas, resumo.cards.total), "red")}
+      ${kpi("Parciais", resumo.cards.parciais, pct(resumo.cards.parciais, resumo.cards.total), "orange")}
+      ${kpi("Psicologia", resumo.cards.psicologia, pct(resumo.cards.psicologia, resumo.cards.total), "purple")}
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <h2>Evolução mensal</h2>
+        ${barList(mensal.map(x => ({ nome: x.label, total: x.total })), 12)}
+      </div>
+      <div class="panel">
+        <h2>Motivos de negativa</h2>
+        ${barList(motivos, 6)}
+      </div>
+    </div>
+
+    <div class="grid4">
+      <div class="panel">
+        <h2>Top especialidades</h2>
+        ${miniTable(topEsp, ["nome","total","aprovadas","negadas"])}
+      </div>
+      <div class="panel">
+        <h2>Top exames</h2>
+        ${miniTable(topExames, ["nome","total","aprovadas","negadas"])}
+      </div>
+      <div class="panel">
+        <h2>Destinos - Consultas</h2>
+        ${miniTable(topConsulta, ["nome","total"])}
+      </div>
+      <div class="panel">
+        <h2>Destinos - Exames</h2>
+        ${miniTable(topExame, ["nome","total"])}
+      </div>
+    </div>
+
+    <div class="footer">
+      <span>Fonte: planilhas Online e Presencial integradas via Google Apps Script.</span>
+      <span>Gerado automaticamente pelo Dashboard de Guias.</span>
+    </div>
+  </section>
+</body>
+</html>`;
+
+  const win = window.open("", "_blank");
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+
+  setTimeout(() => {
+    win.focus();
+    win.print();
+  }, 800);
+}
+
+function kpi(label, value, sub, cls) {
+  return `<div class="kpi ${cls}"><span>${escapeHtml(label)}</span><b>${value}</b><small>${escapeHtml(sub)}</small></div>`;
+}
+
+function barList(items, limit) {
+  const arr = items.slice(0, limit);
+  const max = Math.max(...arr.map(x => x.total || 0), 1);
+  return `<div class="bars">${arr.map(x => {
+    const w = ((x.total || 0) / max) * 100;
+    return `<div class="bar-row">
+      <div>${escapeHtml(x.nome || x.label || "Não informado")}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${w}%"></div></div>
+      <div style="text-align:right">${x.total || 0}</div>
+    </div>`;
+  }).join("")}</div>`;
+}
+
+function miniTable(items, fields) {
+  const labels = { nome:"Nome", total:"Total", aprovadas:"Aut.", negadas:"Neg." };
+  return `<table>
+    <thead><tr>${fields.map(f => `<th class="${f !== "nome" ? "num" : ""}">${labels[f] || f}</th>`).join("")}</tr></thead>
+    <tbody>
+      ${items.map(item => `<tr>${fields.map(f => `<td class="${f !== "nome" ? "num" : ""}">${escapeHtml(item[f] ?? 0)}</td>`).join("")}</tr>`).join("")}
+    </tbody>
+  </table>`;
 }
