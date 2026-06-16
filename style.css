@@ -271,3 +271,48 @@ td.num, th.num {
     grid-template-columns: 1fr;
   }
 }
+
+
+.pdf-button {
+  background: linear-gradient(135deg, #15a16a, #34c26b);
+}
+
+.exporting-pdf #inconsistencias,
+.exporting-pdf .sidebar,
+.exporting-pdf #btnExportPdf,
+.exporting-pdf #btnRefresh {
+  display: none !important;
+}
+
+.exporting-pdf .app {
+  display: block;
+}
+
+.exporting-pdf .content {
+  padding: 16px;
+}
+
+.exporting-pdf .topbar {
+  margin-bottom: 16px;
+}
+
+@media print {
+  #inconsistencias,
+  .sidebar,
+  #btnExportPdf,
+  #btnRefresh {
+    display: none !important;
+  }
+
+  .app {
+    display: block;
+  }
+
+  body {
+    background: #0b1524;
+  }
+
+  .content {
+    padding: 12px;
+  }
+}

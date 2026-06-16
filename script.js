@@ -10,6 +10,7 @@ const meses = {
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnRefresh").addEventListener("click", loadData);
+  document.getElementById("btnExportPdf").addEventListener("click", exportarPDF);
   ["filterOrigem", "filterAno", "filterMes"].forEach(id => {
     document.getElementById(id).addEventListener("change", render);
   });
@@ -335,4 +336,73 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+
+async function exportarPDF() {
+  const btn = document.getElementById("btnExportPdf");
+  const oldText = btn.textContent;
+
+  try {
+    btn.textContent = "Gerando PDF...";
+    btn.disabled = true;
+
+    const origem = document.getElementById("filterOrigem").value;
+    const ano = document.getElementById("filterAno").value;
+    const mes = document.getElementById("filterMes").value;
+    const mesNome = mes === "Todos" ? "Ano" : (meses[Number(mes)] || "Mes");
+
+    const clone = document.querySelector(".content").cloneNode(true);
+
+    const inconsistencias = clone.querySelector("#inconsistencias");
+    if (inconsistencias) inconsistencias.remove();
+
+    const buttons = clone.querySelectorAll("button");
+    buttons.forEach(b => b.remove());
+
+    const inputs = clone.querySelectorAll("input");
+    inputs.forEach(input => input.remove());
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "pdf-export";
+    wrapper.style.background = "#0b1524";
+    wrapper.style.color = "#e8eef7";
+    wrapper.style.padding = "20px";
+    wrapper.style.width = "1400px";
+    wrapper.appendChild(clone);
+
+    document.body.appendChild(wrapper);
+
+    const filename = `dashboard-guias_${origem}_${ano}_${mesNome}.pdf`
+      .replaceAll(" ", "_")
+      .replaceAll("/", "-");
+
+    const options = {
+      margin: 8,
+      filename,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#0b1524"
+      },
+      jsPDF: {
+        unit: "mm",
+        format: "a4",
+        orientation: "landscape"
+      },
+      pagebreak: {
+        mode: ["avoid-all", "css", "legacy"]
+      }
+    };
+
+    await html2pdf().set(options).from(wrapper).save();
+
+    wrapper.remove();
+  } catch (err) {
+    alert("Erro ao gerar PDF: " + err.message);
+  } finally {
+    btn.textContent = oldText;
+    btn.disabled = false;
+  }
 }
