@@ -297,29 +297,20 @@ function renderTable(id, items, fields) {
 }
 
 function renderInconsistencias(items) {
+  const grupos = montarSugestoesDicionario(items);
+
   const html = `
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Campo</th>
-            <th>Valor encontrado</th>
-            <th>Normalizado</th>
-            <th class="num">Qtde</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${items.slice(0, 100).map(x => `
-            <tr>
-              <td>${escapeHtml(x.campo)}</td>
-              <td>${escapeHtml(x.valorOriginal)}</td>
-              <td>${escapeHtml(x.valorNormalizado)}</td>
-              <td class="num">${x.quantidade}</td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-    </div>`;
+    <div class="dictionary-actions">
+      <button class="small-btn" onclick="copiarDicionario('ESPECIALIDADE')">Copiar ESPECIALIDADE</button>
+      <button class="small-btn" onclick="copiarDicionario('EXAME')">Copiar EXAME</button>
+      <button class="small-btn" onclick="copiarDicionario('LOCAL')">Copiar LOCAL</button>
+      <button class="small-btn" onclick="copiarDicionario('TODOS')">Copiar TODOS</button>
+    </div>
+
+    ${renderGrupoDicionario("ESPECIALIDADE", grupos.ESPECIALIDADE)}
+    ${renderGrupoDicionario("EXAME", grupos.EXAME)}
+    ${renderGrupoDicionario("LOCAL", grupos.LOCAL)}
+  `;
 
   document.getElementById("tableInconsistencias").innerHTML = html;
 }
@@ -335,6 +326,143 @@ function filterInconsistenciasByCurrentRecords(registros) {
   });
 
   return rawData.inconsistencias.filter(x => allowed.has(String(x.valorOriginal)));
+}
+
+
+function montarSugestoesDicionario(items) {
+  const grupos = {
+    ESPECIALIDADE: [],
+    EXAME: [],
+    LOCAL: []
+  };
+
+  const vistos = new Set();
+
+  items.forEach(item => {
+    const campo = String(item.campo || "").toLowerCase();
+    let aba = null;
+
+    if (campo.includes("especialidade")) aba = "ESPECIALIDADE";
+    if (campo.includes("exame")) aba = "EXAME";
+    if (campo.includes("local")) aba = "LOCAL";
+
+    if (!aba) return;
+
+    const encontrado = String(item.valorNormalizado || item.valorOriginal || "").trim().toLowerCase();
+    const padronizado = capitalizarParaExibicao(item.valorOriginal || item.valorNormalizado || "");
+
+    if (!encontrado || !padronizado) return;
+
+    const key = aba + "|" + encontrado;
+    if (vistos.has(key)) return;
+    vistos.add(key);
+
+    grupos[aba].push({
+      aba,
+      encontrado,
+      padronizado,
+      quantidade: item.quantidade || 0
+    });
+  });
+
+  Object.keys(grupos).forEach(k => {
+    grupos[k].sort((a, b) => b.quantidade - a.quantidade);
+  });
+
+  return grupos;
+}
+
+function renderGrupoDicionario(titulo, rows) {
+  if (!rows || !rows.length) {
+    return `
+      <div class="dict-group">
+        <h4>${titulo}</h4>
+        <p class="hint">Nenhuma inconsistência encontrada para esta aba.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="dict-group">
+      <h4>${titulo}</h4>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Encontrado</th>
+              <th>Padronizado</th>
+              <th class="num">Qtde</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.slice(0, 80).map(row => `
+              <tr>
+                <td>${escapeHtml(row.encontrado)}</td>
+                <td>${escapeHtml(row.padronizado)}</td>
+                <td class="num">${row.quantidade}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function copiarDicionario(tipo) {
+  const registros = getFilteredRecords();
+  const inconsistencias = filterInconsistenciasByCurrentRecords(registros);
+  const grupos = montarSugestoesDicionario(inconsistencias);
+
+  let linhas = [];
+
+  const adicionar = (aba, rows) => {
+    rows.forEach(r => {
+      linhas.push(`${r.encontrado}\t${r.padronizado}`);
+    });
+  };
+
+  if (tipo === "TODOS") {
+    adicionar("ESPECIALIDADE", grupos.ESPECIALIDADE);
+    adicionar("EXAME", grupos.EXAME);
+    adicionar("LOCAL", grupos.LOCAL);
+  } else {
+    adicionar(tipo, grupos[tipo] || []);
+  }
+
+  if (!linhas.length) {
+    alert("Não há itens para copiar.");
+    return;
+  }
+
+  navigator.clipboard.writeText(linhas.join("\n"))
+    .then(() => alert(`Copiado. Cole na aba ${tipo === "TODOS" ? "correspondente" : tipo}, a partir da linha 2.`))
+    .catch(() => {
+      const area = document.createElement("textarea");
+      area.value = linhas.join("\n");
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand("copy");
+      area.remove();
+      alert(`Copiado. Cole na aba ${tipo === "TODOS" ? "correspondente" : tipo}, a partir da linha 2.`);
+    });
+}
+
+function capitalizarParaExibicao(texto) {
+  const preposicoes = new Set(["de", "da", "do", "das", "dos", "e", "em", "no", "na", "nos", "nas", "para", "por"]);
+  const siglas = new Set(["rm", "rmn", "tc", "usg", "rx", "oct", "ecg", "eeg", "mapa", "holter", "fr", "iobh"]);
+
+  return String(texto || "")
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .map((p, idx) => {
+      const limpo = p.replace(/[().,:;]/g, "");
+      if (siglas.has(limpo)) return p.toUpperCase();
+      if (idx > 0 && preposicoes.has(p)) return p;
+      return p.charAt(0).toUpperCase() + p.slice(1);
+    })
+    .join(" ");
 }
 
 function countBy(registros, campo) {

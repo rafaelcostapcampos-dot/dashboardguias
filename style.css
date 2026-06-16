@@ -456,3 +456,97 @@ td.num, th.num {
     min-height: 220px !important;
   }
 }
+
+
+/* Aba de inconsistências pronta para copiar para o dicionário */
+.dictionary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0 16px;
+}
+
+.small-btn {
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  background: linear-gradient(135deg, #2563eb, #34c26b);
+}
+
+.dict-group {
+  margin-top: 16px;
+}
+
+.dict-group h4 {
+  margin: 0 0 8px;
+  color: #e8eef7;
+  font-size: 15px;
+  letter-spacing: .3px;
+}
+
+
+/* Ajuste: tabelas sem rolagem horizontal */
+.table-wrap {
+  overflow-x: hidden !important;
+  overflow-y: auto;
+}
+
+table {
+  table-layout: fixed !important;
+  width: 100% !important;
+}
+
+th, td {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  padding: 8px 8px !important;
+}
+
+th.num, td.num {
+  width: 72px;
+  text-align: center !important;
+}
+
+th:first-child,
+td:first-child {
+  width: auto;
+}
+
+#tableInconsistencias th:nth-child(1),
+#tableInconsistencias td:nth-child(1) {
+  width: 130px;
+}
+
+#tableInconsistencias th:nth-child(2),
+#tableInconsistencias td:nth-child(2) {
+  width: 28%;
+}
+
+#tableInconsistencias th:nth-child(3),
+#tableInconsistencias td:nth-child(3) {
+  width: 28%;
+}
+
+#tableInconsistencias th:nth-child(4),
+#tableInconsistencias td:nth-child(4) {
+  width: 70px;
+}
+
+@media (max-width: 900px) {
+  table {
+    font-size: 12px !important;
+  }
+
+  th, td {
+    padding: 7px 6px !important;
+  }
+
+  th.num, td.num {
+    width: 58px;
+  }
+
+  .panel {
+    padding: 12px;
+  }
+}
