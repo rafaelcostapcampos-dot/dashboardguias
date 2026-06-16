@@ -91,6 +91,8 @@ function render() {
 
 function buildSummary(registros) {
   const registrosNormalizados = registros.map(normalizeRecordForDashboard);
+  const consultas = registrosNormalizados.filter(isConsultaRecord);
+  const exames = registrosNormalizados.filter(isExameRecord);
 
   return {
     cards: buildCards(registrosNormalizados),
@@ -99,11 +101,19 @@ function buildSummary(registros) {
     porStatus: countBy(registrosNormalizados, "status"),
     porTipoSolicitacao: groupWithStatus(registrosNormalizados, "tipoSolicitacao"),
     porMotivoNegativa: countBy(registrosNormalizados.filter(r => r.status === "Negado"), "motivoNegativa"),
-    especialidades: groupWithStatus(registrosNormalizados, "especialidade", { skipInvalid: true }),
-    exames: groupWithStatus(registrosNormalizados, "exameEspecifico", { skipInvalid: true }),
-    locaisConsulta: groupWithStatus(registrosNormalizados.filter(r => ["Consulta", "Consulta + Exame"].includes(r.tipoSolicitacao)), "local"),
-    locaisExame: groupWithStatus(registrosNormalizados.filter(r => ["Exame", "Consulta + Exame"].includes(r.tipoSolicitacao)), "local")
+    especialidades: groupWithStatus(consultas, "especialidade", { skipInvalid: true }),
+    exames: groupWithStatus(exames, "exameEspecifico", { skipInvalid: true }),
+    locaisConsulta: groupWithStatus(consultas, "local"),
+    locaisExame: groupWithStatus(exames, "local")
   };
+}
+
+function isConsultaRecord(registro) {
+  return registro.tipoSolicitacao === "Consulta" || registro.tipoSolicitacao === "Consulta + Exame";
+}
+
+function isExameRecord(registro) {
+  return registro.tipoSolicitacao === "Exame" || registro.tipoSolicitacao === "Consulta + Exame";
 }
 
 function normalizeRecordForDashboard(registro) {
