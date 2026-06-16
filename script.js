@@ -87,18 +87,110 @@ function render() {
 }
 
 function buildSummary(registros) {
+  const registrosNormalizados = registros.map(normalizeRecordForDashboard);
+
   return {
-    cards: buildCards(registros),
-    porMes: groupByMonth(registros),
-    porOrigem: groupWithStatus(registros, "origem"),
-    porStatus: countBy(registros, "status"),
-    porTipoSolicitacao: groupWithStatus(registros, "tipoSolicitacao"),
-    porMotivoNegativa: countBy(registros.filter(r => r.status === "Negado"), "motivoNegativa"),
-    especialidades: groupWithStatus(registros, "especialidade"),
-    exames: groupWithStatus(registros, "exameEspecifico"),
-    locaisConsulta: groupWithStatus(registros.filter(r => ["Consulta", "Consulta + Exame"].includes(r.tipoSolicitacao)), "local"),
-    locaisExame: groupWithStatus(registros.filter(r => ["Exame", "Consulta + Exame"].includes(r.tipoSolicitacao)), "local")
+    cards: buildCards(registrosNormalizados),
+    porMes: groupByMonth(registrosNormalizados),
+    porOrigem: groupWithStatus(registrosNormalizados, "origem"),
+    porStatus: countBy(registrosNormalizados, "status"),
+    porTipoSolicitacao: groupWithStatus(registrosNormalizados, "tipoSolicitacao"),
+    porMotivoNegativa: countBy(registrosNormalizados.filter(r => r.status === "Negado"), "motivoNegativa"),
+    especialidades: groupWithStatus(registrosNormalizados, "especialidade", { skipInvalid: true }),
+    exames: groupWithStatus(registrosNormalizados, "exameEspecifico", { skipInvalid: true }),
+    locaisConsulta: groupWithStatus(registrosNormalizados.filter(r => ["Consulta", "Consulta + Exame"].includes(r.tipoSolicitacao)), "local"),
+    locaisExame: groupWithStatus(registrosNormalizados.filter(r => ["Exame", "Consulta + Exame"].includes(r.tipoSolicitacao)), "local")
   };
+}
+
+function normalizeRecordForDashboard(registro) {
+  return {
+    ...registro,
+    especialidade: normalizeEspecialidade(registro.especialidade),
+    tipoExame: normalizeExame(registro.tipoExame),
+    exameEspecifico: normalizeExame(registro.exameEspecifico)
+  };
+}
+
+function normalizeText(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isValidRankingValue(value) {
+  const t = normalizeText(value);
+  return Boolean(
+    t &&
+    ![
+      "nao informado",
+      "nao informada",
+      "naoinformado",
+      "naoinformada",
+      "nao se aplica",
+      "nenhum",
+      "nenhuma",
+      "sem informacao",
+      "sem informacoes",
+      "sem dados",
+      "vazio"
+    ].includes(t)
+  );
+}
+
+function normalizeEspecialidade(value) {
+  const t = normalizeText(value);
+  if (!isValidRankingValue(t)) return "";
+
+  const aliases = {
+    alergista: "Alergologia",
+    cardio: "Cardiologia",
+    cardiologista: "Cardiologia",
+    dermato: "Dermatologia",
+    dermatologista: "Dermatologia",
+    endocrinologista: "Endocrinologia",
+    ginecologista: "Ginecologia",
+    neurologista: "Neurologia",
+    oftalmologista: "Oftalmologia",
+    ortop: "Ortopedia",
+    ortopedista: "Ortopedia",
+    otorrino: "Otorrinolaringologia",
+    otorrinolaringologista: "Otorrinolaringologia",
+    pneumologista: "Pneumologia",
+    urologista: "Urologia"
+  };
+
+  const palavras = t.split(" ");
+  const ultimoTermo = palavras[palavras.length - 1];
+
+  return aliases[t] || aliases[ultimoTermo] || value;
+}
+
+function normalizeExame(value) {
+  const t = normalizeText(value);
+  if (!isValidRankingValue(t)) return "";
+
+  if (t.includes("ecocardiograma") || t.includes("ecott") || t.includes("ectt") || t.includes("ecodopplercardiograma")) {
+    return "Ecocardiograma Transtorácico (ECOTT)";
+  }
+
+  if (t.includes("oftalmologico") || t.includes("oftalmologicos") || t.includes("oftamologico") || t.includes("oftamologicos") || t.includes("oftalmo") || t.includes("oct") || t.includes("mapeamento de retina")) {
+    return "Exames oftalmológicos";
+  }
+
+  if (t.includes("tomografia") || t.split(" ").includes("tc")) return "Tomografia Computadorizada (TC)";
+  if (t.includes("ressonancia") || t.split(" ").includes("rm") || t.split(" ").includes("rmn")) return "Ressonância magnética (RM)";
+  if (t.includes("ultrassom") || t.includes("ultrassonografia") || t.includes("ultrason") || t.includes("doppler") || t.split(" ").includes("us") || t.split(" ").includes("usg")) return "Ultrassonografia (USG)";
+  if (t.includes("mamografia")) return "Mamografia";
+  if (t.includes("densitometria") || t.includes("densiometria")) return "Densitometria óssea";
+  if (t.includes("rx") || t.includes("raio x") || t.includes("raiox")) return "Raio X";
+
+  return value;
 }
 
 function buildCards(registros) {
@@ -476,9 +568,11 @@ function countBy(registros, campo) {
     .sort((a, b) => b.total - a.total);
 }
 
-function groupWithStatus(registros, campo) {
+function groupWithStatus(registros, campo, options = {}) {
   const mapa = {};
   registros.forEach(r => {
+    if (options.skipInvalid && !isValidRankingValue(r[campo])) return;
+
     const key = r[campo] || "Não informado";
     if (!mapa[key]) {
       mapa[key] = { nome: key, total: 0, aprovadas: 0, negadas: 0, parciais: 0 };
